@@ -1,0 +1,37 @@
+{
+    "model_map": {
+      "opus": "claude-3-opus-20240229",
+      "sonnet": "claude-3-5-sonnet-20240620",
+      "haiku": "claude-3-haiku-20240307",
+      "gpt3.5": "gpt-3.5-turbo",
+      "gpt4": "gpt-4-turbo-preview",
+      "gpt4-1106": "gpt-4-1106-preview",
+      "gpt4o": "gpt-4o",
+      "gpt4o-mini": "gpt-4o-mini",
+      "llama8b": "llama-3.1-8b-instant",
+      "llama70b": "llama-3.1-70b-versatile",
+      "llama405b": "llama-3.1-405b-reasoning",
+      "mixtral": "mixtral-8x7b-32768"
+    },
+    "api_keys": {
+      "anthropic": "YOUR_ANTHROPIC_API_KEY_HERE",
+      "openai": "YOUR_OPENAI_API_KEY_HERE",
+      "groq": "YOUR_GROQ_API_KEY_HERE"
+    },
+    "default_model": "llama70b",
+    "default_temperature": 0.0,
+    "metadata_markers": {
+      "model": "!model:",
+      "temp": "!temp:"
+    },
+    "message_markers": {
+      "system": "# System",
+      "user": "# User",
+      "assistant": "# Assistant"
+    },
+    "comment_markers": {
+      "multiline_start": "<!--",
+      "multiline_end": "-->",
+      "singleline": ""
+  }
+}
