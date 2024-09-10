@@ -1,5 +1,3 @@
-Here's a concise yet detailed README for the repository:
-
 # ChatAI
 
 ChatAI project provides a unified terminal and text editor interface for AI chats, supporting multiple APIs including OpenAI, Anthropic, and Groq.
