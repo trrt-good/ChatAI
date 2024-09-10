@@ -83,7 +83,12 @@ ask_to_install() {
 
 # Install terminal and text editor if not already installed
 for tool in "$terminal" "$editor"; do
-    if ! command_exists "$tool"; then
+    if [[ $OS == "macos" && $tool == "macos_terminal" ]]; then
+        # Skip terminal check for macOS
+        continue
+    fi
+
+    if ! command_exists "$tool"; then    
         if ask_to_install "$tool"; then
             echo -e "${YELLOW}Installing $tool...${NC}"
             case $OS in
@@ -113,8 +118,15 @@ if [ "$terminal" = "kitty" ] && [ "$editor" = "micro" ]; then
         [ -d "$launch_dir" ] && break || echo -e "${YELLOW}Directory does not exist. Please enter a valid directory.${NC}"
     done
 
-    ln -sf "$INTEGRATION_DIR/chatai.sh" "$launch_dir/chatai" || error_exit "Failed to create launch script link"
-    chmod +x "$launch_dir/chatai" || error_exit "Failed to make launch script executable"
+    mkdir -p "$SCRIPT_DIR/history" || error_exit "Failed to create history directory"
+
+    # Create the new chatai.sh file
+    cat > "$launch_dir/chatai.sh" <<EOL
+#!/bin/bash
+kitty --hold sh -c "micro $SCRIPT_DIR/history/newchat_\$(date +%Y-%m-%d_%H-%M-%S).md"
+EOL
+
+    chmod +x "$launch_dir/chatai.sh" || error_exit "Failed to make launch script executable"
 
     MICRO_CONFIG_DIR="$HOME/.config/micro"
     INIT_LUA="$MICRO_CONFIG_DIR/init.lua"
@@ -129,6 +141,35 @@ if [ "$terminal" = "kitty" ] && [ "$editor" = "micro" ]; then
         "$INTEGRATION_DIR/init.lua" > "$INIT_LUA" || error_exit "Failed to create init.lua"
 
     echo -e "${GREEN}Installation complete for Kitty terminal and Micro editor.${NC}"
+elif [ "$terminal" = "macos_terminal" ] && [ "$editor" = "micro" ]; then
+    while true; do
+        read -p "Enter directory to place the launch script: " launch_dir
+        [ -d "$launch_dir" ] && break || echo -e "${YELLOW}Directory does not exist. Please enter a valid directory.${NC}"
+    done
+
+    mkdir -p "$SCRIPT_DIR/history" || error_exit "Failed to create history directory"
+
+    # Create the new chatai.sh file for macOS Terminal
+    cat > "$launch_dir/chatai.sh" <<EOL
+#!/bin/bash
+open -a Terminal --new-window --command "micro $SCRIPT_DIR/history/newchat_\$(date +%Y-%m-%d_%H-%M-%S).md"
+EOL
+
+    chmod +x "$launch_dir/chatai.sh" || error_exit "Failed to make launch script executable"
+
+    MICRO_CONFIG_DIR="$HOME/.config/micro"
+    INIT_LUA="$MICRO_CONFIG_DIR/init.lua"
+    if [ -f "$INIT_LUA" ]; then
+        read -p "$INIT_LUA already exists. Replace it? (y/n) " replace
+        [ "$replace" != "y" ] && { echo "Exiting without modifying init.lua"; exit 0; }
+    fi
+
+    mkdir -p "$MICRO_CONFIG_DIR"
+    sed -e "s|<ENVIRONMENT_ACTIVATION>|$VENV_DIR/bin/activate|g" \
+        -e "s|<RUN_SCRIPT>|$SCRIPT_DIR/run.py|g" \
+        "$INTEGRATION_DIR/init.lua" > "$INIT_LUA" || error_exit "Failed to create init.lua"
+
+    echo -e "${GREEN}Installation complete for macOS Terminal and Micro editor.${NC}"
 else
     error_exit "No specific actions defined for $terminal and $editor combination."
 fi
@@ -141,8 +182,7 @@ echo -e "${GREEN}Installation completed successfully.${NC}"
 # Final instructions
 print_header "Final Steps"
 echo -e "${YELLOW}1. Add your API keys to config.json${NC}"
-echo -e "${YELLOW}2. Set up a hotkey with your desktop environment to run:${NC}"
-echo -e "${CYAN}   $(pwd)/chatai${NC}"
-echo -e "${YELLOW}3. (Optional) If you would like to use environment variables rather than the config for API keys, you can manually modify the launch script to set them:${NC}"
-echo -e "${CYAN}   $(readlink -f "$launch_dir/chatai")${NC}"
+echo -e "${YELLOW}2. Set up a hotkey with your desktop environment/OS to run the script:${NC}"
+echo -e "${CYAN}   $(readlink -f "$launch_dir/chatai.sh")${NC}"
+echo -e "${YELLOW}3. (Optional) If you would like to use environment variables rather than the config for API keys, you can manually modify the launch script to set them${NC}"
 echo -e "\n${GREEN}Enjoy using your new AI chat integration!${NC}"
