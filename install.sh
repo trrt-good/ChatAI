@@ -118,8 +118,6 @@ if [ "$terminal" = "kitty" ] && [ "$editor" = "micro" ]; then
         [ -d "$launch_dir" ] && break || echo -e "${YELLOW}Directory does not exist. Please enter a valid directory.${NC}"
     done
 
-    mkdir -p "$SCRIPT_DIR/history" || error_exit "Failed to create history directory"
-
     # Create the new chatai.sh file
     cat > "$launch_dir/chatai.sh" <<EOL
 #!/bin/bash
@@ -176,6 +174,10 @@ fi
 
 # Deactivate virtual environment
 deactivate
+
+mkdir -p "$SCRIPT_DIR/history" || error_exit "Failed to create history directory"
+mkdir -p "$SCRIPT_DIR/logs" || error_exit "Failed to create logs directory"
+touch "$SCRIPT_DIR/logs/chatai.log" || error_exit "Failed to create log file"
 
 echo -e "${GREEN}Installation completed successfully.${NC}"
 
