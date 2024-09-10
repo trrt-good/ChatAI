@@ -10,6 +10,8 @@ import re
 import pathlib
 
 script_directory = os.path.dirname(os.path.realpath(__file__))
+if not os.path.exists('history'):
+    os.makedirs('history')
 if not os.path.exists('logs'):
     os.makedirs('logs')
 pathlib.Path(os.path.join('logs', "chatai.log")).touch()
