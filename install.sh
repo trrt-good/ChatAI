@@ -1,22 +1,11 @@
 #!/bin/bash
 
-# At the beginning of the script
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    IS_MACOS=true
-else
-    IS_MACOS=false
-fi
+set -e
 
-# Then, where you use sed, you can do:
-if [ "$IS_MACOS" = true ]; then
-    sed -e "s|<ENVIRONMENT_ACTIVATION>|$VENV_DIR/bin/activate|g" \
-        -e "s|<RUN_SCRIPT>|$SCRIPT_DIR/run.py|g" \
-        "$INTEGRATION_DIR/init.lua" > "$INIT_LUA.tmp" && mv "$INIT_LUA.tmp" "$INIT_LUA" || error_exit "Failed to create init.lua"
-else
-    sed -e "s|<ENVIRONMENT_ACTIVATION>|$VENV_DIR/bin/activate|g" \
-        -e "s|<RUN_SCRIPT>|$SCRIPT_DIR/run.py|g" \
-        "$INTEGRATION_DIR/init.lua" > "$INIT_LUA" || error_exit "Failed to create init.lua"
-fi
+# Directory variables
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TERMINAL_INTEGRATION_DIR="$SCRIPT_DIR/terminal_integration"
+VENV_DIR="$SCRIPT_DIR/env"
 
 # Function to check if a command exists
 command_exists() {
