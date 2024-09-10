@@ -2,68 +2,105 @@
 
 set -e
 
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
 # Directory variables
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TERMINAL_INTEGRATION_DIR="$SCRIPT_DIR/terminal_integration"
 VENV_DIR="$SCRIPT_DIR/env"
 
-# Function to check if a command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
+# Function definitions
+command_exists() { command -v "$1" >/dev/null 2>&1; }
+error_exit() { echo -e "${RED}Error: $1${NC}" >&2; exit 1; }
+print_header() { echo -e "\n${BLUE}=== $1 ===${NC}\n"; }
+print_options() { 
+    local arr=("$@")
+    for i in "${!arr[@]}"; do 
+        echo -e "${CYAN}$((i+1))) ${arr[$i]}${NC}"
+    done
 }
 
-# Function to print error and exit
-error_exit() {
-    echo "Error: $1" >&2
-    exit 1
-}
+# Detect OS
+OS=$(case "$OSTYPE" in
+  linux*) echo "linux" ;;
+  darwin*) echo "macos" ;;
+  *) error_exit "Unsupported operating system: $OSTYPE" ;;
+esac)
 
-# Check if Python exists
-if ! command_exists python3; then
-    error_exit "Python 3 is not installed. Please install Python 3 and try again."
-fi
-
-# Create and activate virtual environment
-if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv "$VENV_DIR" || error_exit "Failed to create virtual environment"
-fi
-
+# Check Python and create virtual environment
+command_exists python3 || error_exit "Python 3 is not installed. Please install Python 3 and try again."
+[ ! -d "$VENV_DIR" ] && echo "Creating virtual environment..." && python3 -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate" || error_exit "Failed to activate virtual environment"
 
 # Install required packages
-echo "Installing required packages..."
+echo -e "${YELLOW}Installing required packages...${NC}"
 pip install groq openai anthropic || error_exit "Failed to install packages"
 
-# Function to get supported options
-get_supported_options() {
-    local dir="$1"
-    if [ -d "$dir" ]; then
-        ls "$dir"
-    else
-        echo "No options available"
-    fi
-}
+# Get supported terminals and text editors
+SUPPORTED_TERMINALS=($(ls "$TERMINAL_INTEGRATION_DIR"))
+SUPPORTED_EDITORS=()
 
 # Ask user for terminal
+print_header "Select a Terminal"
+print_options "${SUPPORTED_TERMINALS[@]}"
 while true; do
-    read -p "What terminal are you using? " terminal
-    if [ -d "$TERMINAL_INTEGRATION_DIR/$terminal" ]; then
+    read -p "Enter the number of your terminal: " terminal_choice
+    if ((terminal_choice >= 1 && terminal_choice <= ${#SUPPORTED_TERMINALS[@]})); then
+        terminal=${SUPPORTED_TERMINALS[$((terminal_choice - 1))]}
         break
     else
-        echo "Unsupported terminal. Supported terminals are:"
-        get_supported_options "$TERMINAL_INTEGRATION_DIR"
+        echo -e "${YELLOW}Invalid choice. Please try again.${NC}"
     fi
 done
 
+# Get supported editors for the selected terminal
+SUPPORTED_EDITORS=($(ls "$TERMINAL_INTEGRATION_DIR/$terminal"))
+
 # Ask user for text editor
+print_header "Select a Text Editor for $terminal"
+print_options "${SUPPORTED_EDITORS[@]}"
 while true; do
-    read -p "What text editor are you using? " editor
-    if [ -d "$TERMINAL_INTEGRATION_DIR/$terminal/$editor" ]; then
+    read -p "Enter the number of your text editor: " editor_choice
+    if ((editor_choice >= 1 && editor_choice <= ${#SUPPORTED_EDITORS[@]})); then
+        editor=${SUPPORTED_EDITORS[$((editor_choice - 1))]}
         break
     else
-        echo "Unsupported text editor for $terminal. Supported editors are:"
-        get_supported_options "$TERMINAL_INTEGRATION_DIR/$terminal"
+        echo -e "${YELLOW}Invalid choice. Please try again.${NC}"
+    fi
+done
+
+# Function to ask user if they want to install a package
+ask_to_install() {
+    read -p "Do you want to install $1? (y/n) " install_choice
+    [[ $install_choice == [yY] ]]
+}
+
+# Install terminal and text editor if not already installed
+for tool in "$terminal" "$editor"; do
+    if ! command_exists "$tool"; then
+        if ask_to_install "$tool"; then
+            echo -e "${YELLOW}Installing $tool...${NC}"
+            case $OS in
+                linux)
+                    if command_exists apt-get; then sudo apt-get update && sudo apt-get install -y "$tool"
+                    elif command_exists yum; then sudo yum install -y "$tool"
+                    elif command_exists dnf; then sudo dnf install -y "$tool"
+                    elif command_exists pacman; then sudo pacman -S --noconfirm "$tool"
+                    else error_exit "Unsupported package manager. Please install $tool manually."
+                    fi ;;
+                macos)
+                    command_exists brew && brew install "$tool" || 
+                    error_exit "Homebrew is not installed. Please install Homebrew and try again." ;;
+            esac
+        else
+            echo "Please install $tool manually and run this script again."; exit 1
+        fi
     fi
 done
 
@@ -71,38 +108,27 @@ done
 INTEGRATION_DIR="$TERMINAL_INTEGRATION_DIR/$terminal/$editor"
 
 if [ "$terminal" = "kitty" ] && [ "$editor" = "micro" ]; then
-    # Ask user for directory to put the launch script
     while true; do
         read -p "Enter directory to place the launch script: " launch_dir
-        if [ -d "$launch_dir" ]; then
-            break
-        else
-            echo "Directory does not exist. Please enter a valid directory."
-        fi
+        [ -d "$launch_dir" ] && break || echo -e "${YELLOW}Directory does not exist. Please enter a valid directory.${NC}"
     done
 
-    # Create executable link
     ln -sf "$INTEGRATION_DIR/chatai.sh" "$launch_dir/chatai" || error_exit "Failed to create launch script link"
     chmod +x "$launch_dir/chatai" || error_exit "Failed to make launch script executable"
 
-    # Check if init.lua exists
     MICRO_CONFIG_DIR="$HOME/.config/micro"
     INIT_LUA="$MICRO_CONFIG_DIR/init.lua"
     if [ -f "$INIT_LUA" ]; then
         read -p "$INIT_LUA already exists. Replace it? (y/n) " replace
-        if [ "$replace" != "y" ]; then
-            echo "Exiting without modifying init.lua"
-            exit 0
-        fi
+        [ "$replace" != "y" ] && { echo "Exiting without modifying init.lua"; exit 0; }
     fi
 
-    # Replace placeholders in init.lua
     mkdir -p "$MICRO_CONFIG_DIR"
     sed -e "s|<ENVIRONMENT_ACTIVATION>|$VENV_DIR/bin/activate|g" \
         -e "s|<RUN_SCRIPT>|$SCRIPT_DIR/run.py|g" \
         "$INTEGRATION_DIR/init.lua" > "$INIT_LUA" || error_exit "Failed to create init.lua"
 
-    echo "Installation complete for Kitty terminal and Micro editor."
+    echo -e "${GREEN}Installation complete for Kitty terminal and Micro editor.${NC}"
 else
     error_exit "No specific actions defined for $terminal and $editor combination."
 fi
@@ -110,4 +136,13 @@ fi
 # Deactivate virtual environment
 deactivate
 
-echo "Installation completed successfully."
+echo -e "${GREEN}Installation completed successfully.${NC}"
+
+# Final instructions
+print_header "Final Steps"
+echo -e "${YELLOW}1. Add your API keys to config.json${NC}"
+echo -e "${YELLOW}2. Set up a hotkey with your desktop environment to run:${NC}"
+echo -e "${CYAN}   $(pwd)/chatai${NC}"
+echo -e "${YELLOW}3. (Optional) If you would like to use environment variables rather than the config for API keys, you can manually modify the launch script to set them:${NC}"
+echo -e "${CYAN}   $(readlink -f "$launch_dir/chatai")${NC}"
+echo -e "\n${GREEN}Enjoy using your new AI chat integration!${NC}"
