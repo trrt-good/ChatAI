@@ -158,6 +158,13 @@ def generate_response(system_prompt: str, messages: List[dict], model: str, temp
                 max_tokens=4096
             )
             return response.choices[0].message.content.strip()
+        elif model.startswith("o1"):
+            logger.info("Using OpenAI API for Reasoning Model")
+            response = openai_client.chat.completions.create(
+                model=model,
+                messages=cleaned_messages,
+            )
+            return response.choices[0].message.content.strip()
         elif model.startswith(("llama", "mixtral")):
             logger.info("Using Groq API")
             response = groq_client.chat.completions.create(
