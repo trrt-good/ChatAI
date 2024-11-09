@@ -7,16 +7,19 @@
       "gpt4": "gpt-4-turbo-preview",
       "gpt4-1106": "gpt-4-1106-preview",
       "gpt4o": "gpt-4o",
+      "o1": "o1-preview",
       "gpt4o-mini": "gpt-4o-mini",
       "llama8b": "llama-3.1-8b-instant",
       "llama70b": "llama-3.1-70b-versatile",
       "llama405b": "llama-3.1-405b-reasoning",
-      "mixtral": "mixtral-8x7b-32768"
+      "mixtral": "mixtral-8x7b-32768",
+      "gemini-fast": "gemini-1.5-flash-002",
+      "gemini": "gemini-1.5-pro-002"
     },
     "api_keys": {
-      "anthropic": "YOUR_ANTHROPIC_API_KEY_HERE",
-      "openai": "YOUR_OPENAI_API_KEY_HERE",
-      "groq": "YOUR_GROQ_API_KEY_HERE"
+      "anthropic": "",
+      "openai": "",
+      "groq": ""
     },
     "default_model": "llama70b",
     "default_temperature": 0.0,
@@ -33,5 +36,10 @@
       "multiline_start": "<!--",
       "multiline_end": "-->",
       "singleline": ""
-  }
+    },
+    "use_prompt_marker": "!useprompt:",
+    "prompt_variable_markers": {
+      "start": "[[",
+      "end": "]]"
+    }
 }
